@@ -684,8 +684,8 @@ elif page == "😴 Snooze History":
                             # Calculate duration
                             duration = calculate_duration(event.get('snoozeStart'), event.get('snoozeEnd'))
                             
-                            # Create report link
-                            report_link = f"[View Report](https://retail.deliverect.com/operationreports/{event['id']})" if event.get('id') else "N/A"
+                            # Create report URL (plain text for dataframe)
+                            report_url = f"https://retail.deliverect.com/operationreports/{event['id']}" if event.get('id') else "N/A"
                             
                             display_data.append({
                                 '#': idx,
@@ -697,18 +697,25 @@ elif page == "😴 Snooze History":
                                 'Snooze End': end,
                                 'Duration': duration,
                                 'User': f"{event.get('user_name', 'N/A')} ({event.get('user_id', '')})",
-                                'Report': report_link
+                                'Report Link': report_url
                             })
                         
                         # Create DataFrame for display
                         df_history = pd.DataFrame(display_data)
                         
-                        # Display as a styled table
+                        # Display as a styled table with clickable links
                         st.dataframe(
                             df_history,
                             use_container_width=True,
                             hide_index=True,
-                            height=400
+                            height=400,
+                            column_config={
+                                "Report Link": st.column_config.LinkColumn(
+                                    "Report",
+                                    display_text="View Report",
+                                    help="Click to view the operation report"
+                                )
+                            }
                         )
                         
                         # Also display in a more visual card format
