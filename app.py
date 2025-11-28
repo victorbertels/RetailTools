@@ -695,7 +695,6 @@ elif page == "😴 Snooze History":
                                 'PLU': event.get('plu', plu),
                                 'Snooze Start': start,
                                 'Snooze End': end,
-                                'Duration': duration,
                                 'User': f"{event.get('user_name', 'N/A')} ({event.get('user_id', '')})",
                                 'Report Link': report_url
                             })
