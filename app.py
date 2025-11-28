@@ -23,7 +23,8 @@ page = st.sidebar.radio(
     [
         "📦 Catalog Importer",
         "📊 Count Items in Menu",
-        "😴 Snooze History"
+        "😴 Snooze History",
+        "🔍 Missing Inventory"
     ],
     label_visibility="collapsed"
 )
@@ -783,4 +784,128 @@ elif page == "😴 Snooze History":
                     import traceback
                     with st.expander("Show error details"):
                         st.code(traceback.format_exc())
+
+elif page == "🔍 Missing Inventory":
+    # Import missing inventory functions
+    sys.path.insert(0, str(project_root / "missingInventoryHighlighter.py"))
+    import importlib
+    import pandas as pd
+    import time
+    missingInventory = importlib.import_module("missingInventory")
+    getInventory = missingInventory.getInventory
+    getItems = missingInventory.getItems
+    hasInventory = missingInventory.hasInventory
+    getLocationName = missingInventory.getLocationName
+    
+    st.title("🔍 Missing Inventory")
+    st.markdown("Find items that exist in the catalog but are missing from inventory for a specific location.")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        account = st.text_input("Account ID", placeholder="Enter account ID", key="missing_inv_account")
+    
+    with col2:
+        location = st.text_input("Location ID", placeholder="Enter location ID", key="missing_inv_location")
+    
+    if st.button("🚀 Find Missing Inventory", type="primary", use_container_width=True):
+        if not all([account, location]):
+            st.error("Please fill in both Account ID and Location ID")
+        else:
+            # Create progress indicators
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            log_container = st.container()
+            
+            try:
+                # Step 1: Get location name
+                status_text.text("🔍 Step 1/4: Getting location information...")
+                progress_bar.progress(10)
+                location_name = getLocationName(location)
+                if not location_name:
+                    location_name = "Unknown Location"
+                status_text.text(f"✓ Location found: {location_name}")
+                
+                # Step 2: Fetch inventory
+                status_text.text("📦 Step 2/4: Fetching inventory data...")
+                progress_bar.progress(25)
+                
+                with log_container:
+                    with st.spinner("⏳ Fetching inventory items..."):
+                        inventory = getInventory(account, location)
+                
+                status_text.text(f"✓ Found {len(inventory)} inventory items")
+                progress_bar.progress(50)
+                
+                # Step 3: Fetch all items
+                status_text.text("🛒 Step 3/4: Fetching all catalog items...")
+                progress_bar.progress(60)
+                
+                with log_container:
+                    with st.spinner("⏳ Fetching catalog items..."):
+                        items = getItems(account)
+                
+                status_text.text(f"✓ Found {len(items)} catalog items")
+                progress_bar.progress(75)
+                
+                # Step 4: Find missing inventory
+                status_text.text("🔍 Step 4/4: Comparing inventory with catalog...")
+                progress_bar.progress(80)
+                
+                missing_inventory = []
+                for item in items:
+                    if not hasInventory(inventory, item.get("plu"), location):
+                        missing_inventory.append(item)
+                
+                progress_bar.progress(100)
+                status_text.text("✅ Analysis complete!")
+                time.sleep(0.5)
+                status_text.empty()
+                progress_bar.empty()
+                
+                st.success(f"Analysis complete for: {location_name}")
+                
+                # Display summary metrics
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("Total Catalog Items", len(items))
+                with col2:
+                    st.metric("Items in Inventory", len(inventory))
+                with col3:
+                    st.metric("Missing Items", len(missing_inventory))
+                
+                if missing_inventory:
+                    st.markdown("---")
+                    st.subheader("📋 Missing Inventory Items")
+                    
+                    # Prepare data for display
+                    display_data = []
+                    for item in missing_inventory:
+                        display_data.append({
+                            'Location': location_name,
+                            'PLU': item.get("plu", "N/A"),
+                            'Name': item.get("name", "N/A")
+                        })
+                    
+                    df_missing = pd.DataFrame(display_data)
+                    st.dataframe(df_missing, use_container_width=True, hide_index=True)
+                    
+                    # Download CSV
+                    csv_data = df_missing.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Download Missing Inventory CSV",
+                        data=csv_data,
+                        file_name=f"missing_inventory_{location_name}_{location}.csv",
+                        mime="text/csv",
+                        help="Download the missing inventory items as a CSV file"
+                    )
+                else:
+                    st.info("✅ All catalog items are present in inventory for this location!")
+                        
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
+                import traceback
+                with st.expander("Show error details"):
+                    st.code(traceback.format_exc())
 
