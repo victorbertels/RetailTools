@@ -9,7 +9,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from authentication.tokening import headers
+from authentication.tokening import getHeaders
 import requests
 
 
@@ -25,7 +25,7 @@ def getLocationName(location: str):
     """
     try:
         url = f"https://api.deliverect.io/locations/{location}"
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=getHeaders())
         if response.status_code == 200:
             return response.json().get("name")
         return None
@@ -46,7 +46,7 @@ def getAccountName(account: str):
     """
     try:
         url = f"https://api.deliverect.io/accounts/{account}"
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=getHeaders())
         if response.status_code == 200:
             return response.json().get("name")
         return None
@@ -70,7 +70,7 @@ def getAllLocations(account: str, return_format: str = "list"):
     """
     try:
         url = f"https://api.deliverect.io/locations?where={{\"account\":\"{account}\"}}"
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=getHeaders())
         
         if response.status_code != 200:
             return []
@@ -109,7 +109,7 @@ def findChannelNameById(channelId: int):
     """
     try:
         url = f"https://api.deliverect.io/integrations?where={{\"integrationType\":\"channel\",\"backendId\":{channelId}}}"
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=getHeaders())
         
         if response.status_code == 200:
             items = response.json().get("_items", [])
@@ -139,7 +139,7 @@ def getAllChannelLinks(account: str, group_by_channel: bool = True):
     
     while True:
         url = f"https://api.deliverect.io/channelLinks?where={{\"account\":\"{account}\"}}&page={page}&limit=500"
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=getHeaders())
         
         if response.status_code != 200:
             break
@@ -203,7 +203,7 @@ def paginate_api(url: str, items_key: str = "_items", max_results: int = 500, **
         
         full_url = f"{url}?{params}" if "?" not in url else f"{url}&{params}"
         
-        response = requests.get(full_url, headers=headers)
+        response = requests.get(full_url, headers=getHeaders())
         if response.status_code != 200:
             break
             

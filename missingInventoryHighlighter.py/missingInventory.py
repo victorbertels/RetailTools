@@ -5,7 +5,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 
-from authentication.tokening import getToken, headers 
+from authentication.tokening import getToken, getHeaders 
 import requests
 import csv
 
@@ -15,7 +15,7 @@ def getInventory(account: str ):
     inventory_items = []
     while True:
         payload_inventory = {"sort":"-_id","max_results":50,"locations":[], "page": page}
-        response = requests.post(inventory_url, headers=headers, json=payload_inventory)
+        response = requests.post(inventory_url, headers=getHeaders(), json=payload_inventory)
         inventory = response.json()
         items = inventory.get("_items", [])
         if not items:
@@ -56,7 +56,7 @@ def getItems(account: str):
     while True:
         items = f"https://api.deliverect.io/catalog/accounts/{account}/items"
         payloadItems = {"visible":True,"max_results":500,"sort":"-_id", "page": page}
-        response = requests.post(items, headers=headers, json=payloadItems).json()
+        response = requests.post(items, headers=getHeaders(), json=payloadItems).json()
         items = response["_items"]
         if not items:
             break
@@ -70,12 +70,12 @@ def getItems(account: str):
 
 def getLocationName(location: str):
     url = f"https://api.deliverect.io/locations/{location}"
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=getHeaders())
     return response.json().get("name")
 
 def getAccountName(account: str):
     url = f"https://api.deliverect.io/accounts/{account}"
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=getHeaders())
     return response.json().get("name")
 
 
@@ -94,7 +94,7 @@ def writeToCSV(missing_inventory: list, account: str, location: str, location_na
 
 def getAllLocations(account : str ):
     url = f"https://api.deliverect.io/accounts/{account}"
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=getHeaders())
     return response.json().get("locations")
 
 def getMissingInventory(account : str , location : str = None, inventory : list = None, items : list = None):
@@ -161,6 +161,6 @@ def getMissingInventory(account : str , location : str = None, inventory : list 
 # print(getInventory("6929b2df534c927a631cd6b1", "6929b3740fbed98992338f45")) # TEST ACCOUNT
 # print(getItems("6929b2df534c927a631cd6b1")) # TEST ACCOUNT
 # print(getItems("689da16a194569500f454819")) #SPAR
-print(getMissingInventory("6929b2df534c927a631cd6b1")) #TEST ACCOUNT
+# print(getMissingInventory("6929b2df534c927a631cd6b1")) #TEST ACCOUNT
 # print(getMissingInventory("689da16a194569500f454819", "6904bd808e1c9f7c711dfe45")) #SPAR
 

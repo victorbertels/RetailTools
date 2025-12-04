@@ -5,7 +5,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from authentication.tokening import headers
+from authentication.tokening import getHeaders
 import requests
 from utils import getAllLocations, getAllChannelLinks
 
@@ -30,7 +30,7 @@ def returnChannelLinksPerChannel(channelLinks: list, channel: int):
 def closeStore(locationId: str, preparationTimeDelay: int):
     url = f"https://api.deliverect.io/location/{locationId}/busymode"
     payload = {"locationId":locationId,"preparationTimeDelay":preparationTimeDelay}
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(url, headers=getHeaders(), json=payload)
     print(response.json())
     if response.status_code == 200:
         print(f"Location {locationId} closed successfully")
@@ -42,7 +42,7 @@ def closeStore(locationId: str, preparationTimeDelay: int):
 def closeChannelLink(channelLinkId: str, preparationTimeDelay: int):
     url = f"https://api.deliverect.io/channellink/{channelLinkId}/busymode"
     payload = {"channelLinkId":channelLinkId,"preparationTimeDelay":preparationTimeDelay}
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(url, headers=getHeaders(), json=payload)
     print(response.json())
     if response.status_code == 200:
         print(f"Channel Link {channelLinkId}  successfully")

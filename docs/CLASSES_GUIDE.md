@@ -48,19 +48,19 @@ class DeliverectAPI:
         """
         self.account_id = account_id
         self.base_url = "https://api.deliverect.io"
-        from authentication.tokening import headers
-        self.headers = headers
+        from authentication.tokening import getHeaders
+        self.getHeaders = getHeaders
     
     def get_location_name(self, location_id):
         """Instance method - works with this specific account."""
         url = f"{self.base_url}/locations/{location_id}"
-        response = requests.get(url, headers=self.headers)
+        response = requests.get(url, headers=self.getHeaders())
         return response.json().get("name")
     
     def get_account_name(self):
         """Instance method - uses self.account_id."""
         url = f"{self.base_url}/accounts/{self.account_id}"
-        response = requests.get(url, headers=self.headers)
+        response = requests.get(url, headers=self.getHeaders())
         return response.json().get("name")
 
 # Usage:
@@ -206,7 +206,7 @@ lookup = helper.build_lookup_set(inventory)
 
 ```python
 import requests
-from authentication.tokening import headers
+from authentication.tokening import getHeaders
 
 class InventoryManager:
     """Manages inventory operations for an account."""
@@ -374,16 +374,16 @@ class BaseAPIManager:
     def __init__(self, account_id):
         self.account_id = account_id
         self.base_url = "https://api.deliverect.io"
-        from authentication.tokening import headers
-        self.headers = headers
+        from authentication.tokening import getHeaders
+        self.getHeaders = getHeaders
     
     def make_request(self, endpoint, method="GET", **kwargs):
         """Common request method."""
         url = f"{self.base_url}/{endpoint}"
         if method == "GET":
-            return requests.get(url, headers=self.headers, **kwargs)
+            return requests.get(url, headers=self.getHeaders(), **kwargs)
         elif method == "POST":
-            return requests.post(url, headers=self.headers, **kwargs)
+            return requests.post(url, headers=self.getHeaders(), **kwargs)
 
 class InventoryManager(BaseAPIManager):
     """Extends BaseAPIManager."""

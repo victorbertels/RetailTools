@@ -10,7 +10,7 @@ import json
 from datetime import datetime
 import os
 import pandas as pd
-from authentication.tokening import getToken, headers
+from authentication.tokening import getToken, getHeaders
 
 
 # menu = "682f29eefb114f00960f1bf5" # ASDA MENU
@@ -25,7 +25,7 @@ def getLocationName(location, tags = None):
     try:
         url = f"https://api.deliverect.io/locations/{location}"
         print(f"  [DEBUG] Fetching location name from: {url}")
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=getHeaders())
         
         if response.status_code != 200:
             print(f"  [ERROR] Failed to get location: Status {response.status_code}")
@@ -56,7 +56,7 @@ def isSnoozed(productId, products_dict):
 def getPreview(url, location_name):
     try:
         print(f"  [DEBUG] Fetching menu preview from: {url}")
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=getHeaders())
         
         if response.status_code != 200:
             print(f"  [ERROR] Failed to get menu preview: Status {response.status_code}")
@@ -187,7 +187,7 @@ def getLocationCount(accountId):
     try:
         url = f"https://api.deliverect.io/accounts/{accountId}"
         print(f"[DEBUG] Fetching locations from: {url}")
-        response = requests.request("GET", url, headers=headers)
+        response = requests.request("GET", url, headers=getHeaders())
         
         if response.status_code != 200:
             print(f"[ERROR] Failed to get account locations: Status {response.status_code}")
@@ -213,7 +213,7 @@ if __name__ == "__main__":
         # Verify authentication
         print(f"[DEBUG] Checking authentication...")
         try:
-            test_response = requests.get("https://api.deliverect.io/accounts", headers=headers)
+            test_response = requests.get("https://api.deliverect.io/accounts", headers=getHeaders())
             if test_response.status_code == 200:
                 print(f"[SUCCESS] Authentication OK")
             else:

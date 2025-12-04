@@ -43,7 +43,7 @@ if page == "📦 Catalog Importer":
     import tempfile
     import time
     import requests
-    from authentication.tokening import getToken, headers
+    from authentication.tokening import getToken, getHeaders
     
     # Import functions from catImporter
     import importlib
@@ -215,7 +215,7 @@ if page == "📦 Catalog Importer":
                     "max_results": page_size,
                     "sort": "-_id"
                 }
-                resp = requests.post(f"https://api.deliverect.io/catalog/accounts/{account_id}/items", json=payload, headers=headers).json()
+                resp = requests.post(f"https://api.deliverect.io/catalog/accounts/{account_id}/items", json=payload, headers=getHeaders()).json()
                 
                 items = resp.get("_items") if isinstance(resp, dict) else []
                 if not items:
@@ -363,7 +363,7 @@ elif page == "📊 Count Items in Menu":
     import requests
     import pandas as pd
     import os
-    from authentication.tokening import getToken, headers
+    from authentication.tokening import getToken, getHeaders
     
     # Import countItems functions (suppress linter warning - works at runtime)
     import importlib

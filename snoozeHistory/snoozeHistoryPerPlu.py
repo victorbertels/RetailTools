@@ -6,7 +6,7 @@ from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Optional
 import requests
-from authentication.tokening import getToken, headers 
+from authentication.tokening import getToken, getHeaders 
 
 
 def get_snooze_history_for_plu(
@@ -69,7 +69,7 @@ def get_snooze_history_for_plu(
     payload = {"where": where_clause}
     
     # Make API request
-    response = requests.post(url, json=payload, headers=headers)
+    response = requests.post(url, json=payload, headers=getHeaders())
     
     # Check for errors
     if response.status_code != 200:

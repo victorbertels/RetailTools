@@ -2,7 +2,7 @@ import csv
 
 import json
 import requests
-from authentication.tokening import getToken, headers
+from authentication.tokening import getToken, getHeaders
 path = "/Users/victorbertels/Downloads/CatalogStructure.csv"
 token = getToken()
 # Token will be fetched fresh in each function to avoid stale tokens
@@ -45,7 +45,7 @@ def createCatalog(accountId, name):
 
     url = f'https://api.deliverect.io/catalog/accounts/{accountId}/catalog'
     payload = {"fillType":"EMPTY","menuType":0,"name":name,"internalName":"","description":""}
-    response = requests.post(url = url, headers=headers, json=payload)
+    response = requests.post(url = url, headers=getHeaders(), json=payload)
     catalog_id = response.json()["catalogId"]
     print(f"✓ Created catalog: '{name}'")
     return catalog_id
@@ -54,7 +54,7 @@ def createCatalog(accountId, name):
 def getAccountName(accountId):  
 
     url = f'https://api.deliverect.io/accounts/{accountId}'
-    response = requests.get(url = url, headers=headers)
+    response = requests.get(url = url, headers=getHeaders())
     return response.json()["name"]
 
 
@@ -62,7 +62,7 @@ def createCategories(accountId, catalogId, categoryName):
 
     url = f'https://api.deliverect.io/channelCategories'
     payload = {"name": categoryName, "description": "", "menu": catalogId, "account": accountId}
-    response = requests.post(url = url, headers=headers, json=payload)
+    response = requests.post(url = url, headers=getHeaders(), json=payload)
     category_id = response.json()["_id"]
     print(f"  ✓ Created category: '{categoryName}'")
     return category_id
@@ -74,7 +74,7 @@ def createSubCategories(accountId, catalogId, categoryId, subCategoryName):
     
     url = f"https://api.deliverect.io/catalog/accounts/{accountId}/catalog/{catalogId}/category/{categoryId}/subCategory"
     payload = {"name": subCategoryName, "description": "", "menu": catalogId, "account": accountId}
-    response = requests.post(url = url, headers=headers, json=payload)
+    response = requests.post(url = url, headers=getHeaders(), json=payload)
     response_data = response.json()
     subcategory_id = response_data["id"]
     print(f"    ✓ Created subcategory: '{subCategoryName}' ")
@@ -94,7 +94,7 @@ def getAllProducts(accountId):
             "max_results": page_size,
             "sort": "-_id"
         }
-        resp = requests.post(f"https://api.deliverect.io/catalog/accounts/{accountId}/items",json=payload, headers=headers
+        resp = requests.post(f"https://api.deliverect.io/catalog/accounts/{accountId}/items",json=payload, headers=getHeaders()
         ).json()
 
         # Try common list keys; adjust to your API’s response shape if needed
@@ -142,7 +142,7 @@ def getEtag(subCategoryId, retry_count=3, delay=0.5):
     
     for attempt in range(retry_count):
         try:
-            response = requests.get(url=url, headers=headers)
+            response = requests.get(url=url, headers=getHeaders())
             
             # Check if request was successful
             response.raise_for_status()
@@ -181,6 +181,7 @@ def patchSubCategory(subCategoryId, subProducts, etag):
     # Remove duplicates from subProducts list while preserving order
     unique_subProducts = list(dict.fromkeys(subProducts))
     
+    headers = getHeaders()
     headers["If-Match"] = etag
     url = f"https://api.deliverect.io/channelCategories/{subCategoryId}"
     payload = {"subProducts": unique_subProducts}
