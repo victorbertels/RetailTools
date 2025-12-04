@@ -1,8 +1,21 @@
+import time
+from datetime import datetime, timedelta
+
+# Token cache
+_token_cache = {
+    'token': None,
+    'expires_at': None
+}
 
 def getToken():
     import requests
     import json
     import os
+    
+    # Check if we have a valid cached token
+    if _token_cache['token'] and _token_cache['expires_at']:
+        if datetime.now() < _token_cache['expires_at']:
+            return _token_cache['token']
     
     # Try to get credentials from Streamlit secrets first (for Streamlit Cloud)
     try:
@@ -32,9 +45,21 @@ def getToken():
     }
 
     response = requests.request("POST", url, headers=headers, data=payload).json()
-    return response["access_token"]
+    token = response["access_token"]
+    
+    # Cache the token (OAuth tokens typically expire in 1 hour, we'll refresh 5 minutes early)
+    expires_in = response.get("expires_in", 3600)  # Default to 1 hour if not provided
+    _token_cache['token'] = token
+    _token_cache['expires_at'] = datetime.now() + timedelta(seconds=expires_in - 300)
+    
+    return token
 
 
-headers = {
-    'Authorization': f'Bearer {getToken()}'
-}
+def getHeaders():
+    """Get headers with a fresh token"""
+    return {
+        'Authorization': f'Bearer {getToken()}'
+    }
+
+# For backward compatibility, but this will now refresh automatically
+headers = getHeaders()
