@@ -1211,7 +1211,7 @@ elif page == "🚗 Uber Address Scraper":
     updateLocationAddress = uberScraper.updateLocationAddress
     
     st.title("🚗 Uber Address Scraper")
-    st.markdown("Scrape Uber Eats store information and update location addresses and channel links.")
+    st.markdown("Scrape Uber Eats store information and update location addresses and store URL's.")
     
     account_id = st.text_input(
         "Account ID",
