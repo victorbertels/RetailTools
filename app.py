@@ -24,7 +24,9 @@ page = st.sidebar.radio(
         "📦 Catalog Importer",
         "📊 Count Items in Menu",
         "😴 Snooze History",
-        "🔍 Missing Inventory"
+        "🔍 Missing Inventory",
+        "🔎 Find Items Not in Menu",
+        "🚗 Uber Address Scraper"
     ],
     label_visibility="collapsed"
 )
@@ -1017,6 +1019,372 @@ elif page == "🔍 Missing Inventory":
                         
             except Exception as e:
                 st.error(f"Error: {str(e)}")
+                import traceback
+                with st.expander("Show error details"):
+                    st.code(traceback.format_exc())
+
+elif page == "🔎 Find Items Not in Menu":
+    # Import find items not in menu functions
+    sys.path.insert(0, str(project_root))
+    import importlib
+    import pandas as pd
+    import time
+    from utils.api_helpers import extractAllProductIdsFromCategories, getAllCategoriesPerCatalog, getAccountIdfromCatalogId
+    from catImporter.csvToCatalog import getAllProducts
+    
+    st.title("🔎 Find Items Not in Menu")
+    st.markdown("Find products that exist in the account catalog but are not included in a specific menu/catalog.")
+    
+    catalog_id = st.text_input(
+        "Catalog ID",
+        placeholder="Enter catalog/menu ID",
+        help="The ID of the catalog/menu to check against"
+    )
+    
+    if st.button("🚀 Find Items Not in Menu", type="primary", disabled=not catalog_id):
+        if not catalog_id:
+            st.error("Please enter a Catalog ID")
+        else:
+            # Create progress indicators
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            try:
+                # Step 1: Get account ID from catalog
+                status_text.text("🔍 Step 1/4: Getting account information...")
+                progress_bar.progress(10)
+                account_id = getAccountIdfromCatalogId(catalog_id)
+                if not account_id:
+                    st.error("Could not retrieve account ID from catalog. Please check the catalog ID.")
+                    progress_bar.empty()
+                    status_text.empty()
+                else:
+                    status_text.text(f"✓ Found account ID: {account_id}")
+                    
+                    # Step 2: Get all products in the menu
+                    status_text.text("📋 Step 2/4: Fetching products in menu...")
+                    progress_bar.progress(30)
+                    
+                    with st.spinner("⏳ Loading menu products..."):
+                        categories = getAllCategoriesPerCatalog(catalog_id)
+                        product_ids_in_menu = extractAllProductIdsFromCategories(categories)
+                    
+                    status_text.text(f"✓ Found {len(product_ids_in_menu)} products in menu")
+                    progress_bar.progress(50)
+                    
+                    # Step 3: Get all products in account
+                    status_text.text("🛒 Step 3/4: Fetching all products in account...")
+                    progress_bar.progress(60)
+                    
+                    with st.spinner("⏳ Loading all account products..."):
+                        all_products = getAllProducts(account_id)
+                    
+                    status_text.text(f"✓ Found {len(all_products)} total products in account")
+                    progress_bar.progress(80)
+                    
+                    # Step 4: Find products not in menu
+                    status_text.text("🔍 Step 4/4: Comparing products...")
+                    progress_bar.progress(90)
+                    
+                    # Convert product_ids_in_menu to set for faster lookup
+                    product_ids_set = set(product_ids_in_menu)
+                    
+                    products_not_in_menu = []
+                    for product in all_products:
+                        product_id = product.get("_id")
+                        if product_id and product_id not in product_ids_set:
+                            products_not_in_menu.append(product)
+                    
+                    progress_bar.progress(100)
+                    status_text.text("✅ Analysis complete!")
+                    time.sleep(0.5)
+                    status_text.empty()
+                    progress_bar.empty()
+                    
+                    st.success("🎉 Analysis completed successfully!")
+                    
+                    # Display summary metrics
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("Total Products in Account", len(all_products))
+                    with col2:
+                        st.metric("Products in Menu", len(product_ids_in_menu))
+                    with col3:
+                        st.metric("Products Not in Menu", len(products_not_in_menu))
+                    
+                    st.markdown("---")
+                    
+                    if products_not_in_menu:
+                        st.subheader("📋 Products Not in Menu")
+                        
+                        # Prepare data for display
+                        display_data = []
+                        for product in products_not_in_menu:
+                            display_data.append({
+                                'Item': product.get("name", "N/A"),
+                                'PLU': product.get("plu", "N/A")
+                            })
+                        
+                        # Sort by Item name for better readability
+                        display_data.sort(key=lambda x: x['Item'])
+                        
+                        df_not_in_menu = pd.DataFrame(display_data)
+                        st.dataframe(
+                            df_not_in_menu,
+                            use_container_width=True,
+                            hide_index=True,
+                            height=400
+                        )
+                    else:
+                        st.info("✅ All products in the account are included in this menu!")
+                        # Create empty dataframe for download
+                        display_data = []
+                        df_not_in_menu = pd.DataFrame(columns=['Item', 'PLU'])
+                    
+                    # Always show download button
+                    st.markdown("---")
+                    st.subheader("📥 Download Results")
+                    
+                    safe_catalog_id = catalog_id.replace("/", "_").replace("\\", "_")
+                    
+                    # Download button for products not in menu
+                    csv_data = df_not_in_menu.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Download Products Not in Menu CSV",
+                        data=csv_data,
+                        file_name=f"products_not_in_menu_{safe_catalog_id}.csv",
+                        mime="text/csv",
+                        help="Download the products not in menu as a CSV file"
+                    )
+                    
+                    # Optional: Download all products comparison
+                    if products_not_in_menu:
+                        # Create comparison data with all products and their status
+                        comparison_data = []
+                        product_ids_set = set(product_ids_in_menu)
+                        for product in all_products:
+                            comparison_data.append({
+                                'Item': product.get("name", "N/A"),
+                                'PLU': product.get("plu", "N/A"),
+                                'In Menu': 'Yes' if product.get("_id") in product_ids_set else 'No'
+                            })
+                        comparison_data.sort(key=lambda x: (x['In Menu'], x['Item']))
+                        df_comparison = pd.DataFrame(comparison_data)
+                        
+                        comparison_csv = df_comparison.to_csv(index=False)
+                        st.download_button(
+                            label="📥 Download All Products Comparison CSV",
+                            data=comparison_csv,
+                            file_name=f"all_products_comparison_{safe_catalog_id}.csv",
+                            mime="text/csv",
+                            help="Download all products with their menu status (In Menu: Yes/No)"
+                        )
+                        
+            except Exception as e:
+                st.error(f"Error: {str(e)}")
+                import traceback
+                with st.expander("Show error details"):
+                    st.code(traceback.format_exc())
+                progress_bar.empty()
+                status_text.empty()
+
+elif page == "🚗 Uber Address Scraper":
+    # Import Uber Address Scraper functions
+    sys.path.insert(0, str(project_root))
+    import importlib
+    import time
+    import requests
+    import re
+    from authentication.tokening import getHeaders
+    from utils.api_helpers import getAllLocations
+    
+    # Import functions from uberAddressScraper (package.module format)
+    uberScraper = importlib.import_module("uberAddressScraper.uberAddressScraper")
+    getUberInfo = uberScraper.getUberInfo
+    findUberChannelLink = uberScraper.findUberChannelLink
+    findUberChannelLinkAny = uberScraper.findUberChannelLinkAny
+    stripNumberFromStreet = uberScraper.stripNumberFromStreet
+    mapAddressInfo = uberScraper.mapAddressInfo
+    returnUberUrl = uberScraper.returnUberUrl
+    updateChannelLink = uberScraper.updateChannelLink
+    updateLocationAddress = uberScraper.updateLocationAddress
+    
+    st.title("🚗 Uber Address Scraper")
+    st.markdown("Scrape Uber Eats store information and update location addresses and channel links.")
+    
+    account_id = st.text_input(
+        "Account ID",
+        placeholder="Enter your Deliverect account ID",
+        help="Your Deliverect account ID"
+    )
+    
+    st.markdown("---")
+    
+    if st.button("🚀 Start Scraping", type="primary", disabled=not account_id):
+        if not account_id:
+            st.error("Please enter an Account ID")
+        else:
+            # Create progress indicators
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            
+            # Create log area for detailed feedback
+            st.markdown("### 📋 Update Log")
+            log_placeholder = st.empty()
+            log_messages = []
+            
+            def add_log(message, level="info"):
+                """Add a log message with timestamp"""
+                timestamp = time.strftime('%H:%M:%S')
+                icon = {
+                    "info": "ℹ️",
+                    "success": "✅",
+                    "warning": "⚠️",
+                    "error": "❌",
+                    "processing": "🔄"
+                }.get(level, "•")
+                log_messages.append(f"[{timestamp}] {icon} {message}")
+                # Display last 100 messages
+                with log_placeholder.container():
+                    st.code("\n".join(log_messages[-100:]), language=None)
+            
+            try:
+                # Step 1: Get all locations
+                status_text.text("📍 Step 1/2: Fetching all locations...")
+                add_log("Fetching all locations for account...", "info")
+                progress_bar.progress(5)
+                
+                all_locs_raw = getAllLocations(account_id, return_format="raw")
+                
+                if not all_locs_raw:
+                    st.error("No locations found for this account")
+                    add_log("No locations found", "error")
+                else:
+                    add_log(f"Found {len(all_locs_raw)} locations to process", "success")
+                    progress_bar.progress(10)
+                    
+                    # Step 2: Process each location
+                    status_text.text(f"🔄 Step 2/2: Processing {len(all_locs_raw)} locations...")
+                    
+                    results = {
+                        "total": len(all_locs_raw),
+                        "processed": 0,
+                        "updated": 0,
+                        "skipped": 0,
+                        "errors": []
+                    }
+                    
+                    for idx, loc in enumerate(all_locs_raw):
+                        location_id = loc.get("_id")
+                        location_name = loc.get("name", "Unknown")
+                        
+                        # Update progress
+                        progress = 10 + int((idx / len(all_locs_raw)) * 90)
+                        progress_bar.progress(progress)
+                        status_text.text(f"Processing {idx + 1}/{len(all_locs_raw)}: {location_name}")
+                        
+                        add_log(f"Processing: {location_name} ({location_id})", "processing")
+                        results["processed"] += 1
+                        
+                        try:
+                            # Find Uber channel link
+                            add_log(f"  Searching for Uber channel link...", "info")
+                            uberChannelLink = findUberChannelLinkAny(location_id)
+                            
+                            if not uberChannelLink:
+                                add_log(f"  No Uber Eats channel link found (checked channels 6007 and 7)", "warning")
+                                results["skipped"] += 1
+                                continue
+                            
+                            APIKey = uberChannelLink.get("APIKey")
+                            application = uberChannelLink.get("application")
+                            uberChannelLinkId = uberChannelLink.get("channelLinkId")
+                            
+                            if not APIKey or not application:
+                                add_log(f"  Missing APIKey or application for channel link", "warning")
+                                results["skipped"] += 1
+                                continue
+                            
+                            # Get Uber info
+                            add_log(f"  Fetching Uber store info...", "info")
+                            UberInfo = getUberInfo(application, APIKey)
+                            
+                            if not UberInfo:
+                                add_log(f"  Failed to get Uber info", "error")
+                                results["skipped"] += 1
+                                continue
+                            
+                            # Map address info
+                            addressInfo = mapAddressInfo(UberInfo)
+                            if not addressInfo:
+                                add_log(f"  Failed to map address info", "warning")
+                                results["skipped"] += 1
+                                continue
+                            
+                            # Get Uber URL
+                            uberUrl = returnUberUrl(UberInfo)
+                            
+                            # Update channel link
+                            add_log(f"  Updating channel link with URL...", "processing")
+                            channel_link_updated = updateChannelLink(uberChannelLinkId, uberUrl)
+                            
+                            if channel_link_updated:
+                                add_log(f"  ✓ Channel link updated with URL: {uberUrl}", "success")
+                            else:
+                                add_log(f"  ✗ Failed to update channel link", "error")
+                            
+                            # Update location address
+                            add_log(f"  Updating location address...", "processing")
+                            address_updated = updateLocationAddress(location_id, addressInfo)
+                            
+                            if address_updated:
+                                street = addressInfo.get('address', {}).get('street', 'N/A')
+                                city = addressInfo.get('address', {}).get('city', 'N/A')
+                                add_log(f"  ✓ Location address updated: {street}, {city}", "success")
+                            else:
+                                add_log(f"  ✗ Failed to update location address", "error")
+                            
+                            if channel_link_updated or address_updated:
+                                results["updated"] += 1
+                                add_log(f"  ✅ Completed updates for {location_name}", "success")
+                            else:
+                                results["skipped"] += 1
+                                
+                        except Exception as e:
+                            error_msg = f"Error processing {location_name}: {str(e)}"
+                            add_log(f"  ❌ {error_msg}", "error")
+                            results["errors"].append(error_msg)
+                            results["skipped"] += 1
+                    
+                    # Finalize
+                    progress_bar.progress(100)
+                    status_text.text("✅ Scraping completed!")
+                    add_log("✅ Processing complete!", "success")
+                    
+                    # Show results
+                    st.balloons()
+                    st.success("🎉 Uber address scraping completed!")
+                    
+                    col1, col2, col3, col4 = st.columns(4)
+                    with col1:
+                        st.metric("Total Locations", results["total"])
+                    with col2:
+                        st.metric("Processed", results["processed"])
+                    with col3:
+                        st.metric("Updated", results["updated"])
+                    with col4:
+                        st.metric("Skipped/Errors", results["skipped"])
+                    
+                    if results["errors"]:
+                        st.warning(f"⚠️ {len(results['errors'])} error(s) occurred:")
+                        with st.expander("View Errors"):
+                            for error in results["errors"]:
+                                st.text(f"• {error}")
+            
+            except Exception as e:
+                st.error(f"❌ Error during scraping: {str(e)}")
+                add_log(f"Fatal error: {str(e)}", "error")
                 import traceback
                 with st.expander("Show error details"):
                     st.code(traceback.format_exc())

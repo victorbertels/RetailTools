@@ -216,3 +216,74 @@ def paginate_api(url: str, items_key: str = "_items", max_results: int = 500, **
         yield items
         page += 1
 
+
+def getAllCategoriesPerCatalog(catalogId: str) -> list:
+    """
+    Get all categories for a catalog.
+    
+    Args:
+        catalogId: Catalog ID
+    """
+    try:
+        page = 1    
+        allCategories = []
+        while True:
+            url = f"https://api.deliverect.io/channelCategories?where={{\"menu\":\"{catalogId}\"}}&page={page}&max_results=500"
+            response = requests.get(url, headers=getHeaders())
+            if response.status_code != 200:
+                break
+            data = response.json()
+            categories = data.get("_items", [])
+            if not categories:
+                break
+            allCategories.extend(categories)
+            page += 1
+        print(f"Found {len(allCategories)} categories")
+        return allCategories
+    except Exception as e:
+        print(f"Error getting categories for catalog: {e}")
+        return []
+
+
+def extractAllProductIdsFromCategories(categories: list) -> list:
+    """
+    Extract all product IDs from categories.
+    getAllCategoriesPerCatalog already returns all categories (top-level and subcategories) in a flat list.
+    This function simply extracts subProducts from each category and deduplicates them.
+    
+    Args:
+        categories: List of all categories from getAllCategoriesPerCatalog (includes top-level and subcategories)
+    
+    Returns:
+        List of unique product IDs (deduplicated)
+    """
+    allProductIds = set()  # Use set to automatically deduplicate
+    
+    for category in categories:
+        subProducts = category.get("subProducts")
+        if subProducts:
+            # Add all product IDs to the set (automatically handles duplicates)
+            allProductIds.update(subProducts)
+
+    return list(allProductIds)  # Convert back to list
+
+
+def getAccountIdfromCatalogId(catalogId: str) -> str:
+    """
+    Get account ID from catalog ID.
+    
+    Args:
+        catalogId: Catalog ID
+    """
+    try:
+        url = f"https://api.deliverect.io/channelMenus/{catalogId}"
+        response = requests.get(url, headers=getHeaders())
+        if response.status_code != 200:
+            print(f"Error getting account ID from catalog ID: {response.status_code}")
+            print(f"Error getting account ID from catalog ID: {response.text}")
+            return None
+        menu = response.json()
+        return menu.get("account")
+    except Exception as e:
+        print(f"Error getting account ID from catalog ID: {e}")
+        return None
