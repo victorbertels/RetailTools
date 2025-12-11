@@ -1033,7 +1033,7 @@ elif page == "🔎 Find Items Not in Menu":
     from catImporter.csvToCatalog import getAllProducts
     
     st.title("🔎 Find Items Not in Menu")
-    st.markdown("Find products that exist in the account catalog but are not included in a specific menu/catalog.")
+    st.markdown("Find products that exist in the account but are not included in this specific menu/catalog.")
     
     catalog_id = st.text_input(
         "Catalog ID",
